@@ -52,14 +52,6 @@ typedef struct wrkrInstanceData {
 	instanceData *pData;
 } wrkrInstanceData_t;
 
-typedef struct configSettings_s {
-    char *log_group;
-    char *log_stream;
-    char *aws_region;
-    // TODO: add template?
-} configSettings_t;
-static configSettings_t cs;
-
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
@@ -73,14 +65,6 @@ static struct cnfparamblk actpblk =
 	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
 	  actpdescr
 	};
-
-
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
-	cs.log_group = NULL;
-	cs.log_stream = NULL;
-	cs.aws_region = NULL;
-ENDinitConfVars
 
 
 BEGINcreateInstance
@@ -198,27 +182,8 @@ ENDnewActInst
 NO_LEGACY_CONF_parseSelectorAct
 
 
-/* Free string config variables and reset them to NULL (not necessarily the default!) */
-static rsRetVal freeConfigVariables(void)
-{
-	DEFiRet;
-
-    free(cs.aws_region);
-    cs.aws_region = NULL;
-    free(cs.log_group);
-    cs.log_group = NULL;
-    free(cs.log_stream);
-    cs.log_stream = NULL;
-
-	RETiRet;
-}
-
-
 BEGINmodExit
 CODESTARTmodExit
-	/* cleanup our allocations */
-	freeConfigVariables();
-
 	/* release what we no longer need */
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -234,19 +199,8 @@ CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
 
 
-/* Reset config variables for this module to default values.
- */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	DEFiRet;
-	iRet = freeConfigVariables();
-	RETiRet;
-}
-
-
 BEGINmodInit()
 CODESTARTmodInit
-INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
@@ -254,9 +208,4 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("omawslogs version %s initializing\n", VERSION);
-
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar*) "actionawsloggroup",    0, eCmdHdlrGetWord, NULL, &cs.log_group,   STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar*) "actionawslogstream",   0, eCmdHdlrGetWord, NULL, &cs.log_stream,  STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar*) "actionawsregion",      0, eCmdHdlrGetWord, NULL, &cs.aws_region, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar*) "resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
