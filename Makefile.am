@@ -203,6 +203,10 @@ if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif
 
+if ENABLE_AWSLOGS
+SUBDIRS += plugins/omawslogs
+endif
+
 if ENABLE_FMHTTP
 SUBDIRS += plugins/fmhttp
 endif

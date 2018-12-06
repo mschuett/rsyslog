@@ -1136,6 +1136,18 @@ AC_ARG_ENABLE(mail,
 )
 AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 
+# AWS Cloudwatch Logs support (so far we do not need a library, but we need to turn this on and off)
+AC_ARG_ENABLE(awslogs,
+        [AS_HELP_STRING([--enable-awslogs],[Enable awslogs support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omawslogs="yes" ;;
+          no) enable_omawslogs="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-awslogs) ;;
+         esac],
+        [enable_omawslogs=no]
+)
+AM_CONDITIONAL(ENABLE_AWSLOGS, test x$enable_omawslogs = xyes)
+
 
 AC_ARG_ENABLE(fmhttp,
         [AS_HELP_STRING([--enable-fmhttp],[Enable fmhttp @<:@default=yes@:>@])],
@@ -2331,6 +2343,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
+		plugins/omawslogs/Makefile \
 		plugins/fmhttp/Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omudpspoof/Makefile \
@@ -2408,6 +2421,7 @@ echo "    imkafka module will be compiled:          $enable_imkafka"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
+echo "    omawslogs support enabled:                $enable_omawslogs"
 echo "    omfile-hardened module will be compiled:  $enable_omfile_hardened"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
