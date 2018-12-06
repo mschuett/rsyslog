@@ -133,6 +133,7 @@ BEGINnewActInst
 	char *region = NULL;
 	char *group = NULL;
 	char *stream = NULL;
+	char *template = NULL;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -147,8 +148,10 @@ CODESTARTnewActInst
             region = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if(!strcmp(actpblk.descr[i].name, "group")) {
             group  = es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if(!strcmp(actpblk.descr[i].name, "stream")) {
-            stream = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "stream")) {
+			stream = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			template = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             DBGPRINTF("omawslogs: program error, non-handled "
                       "param '%s'\n", actpblk.descr[i].name);
@@ -156,8 +159,10 @@ CODESTARTnewActInst
     }
 
     CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_FileFormat"),
-						 OMSR_NO_RQD_TPL_OPTS));
+    if (!template) {
+    	template = strdup("RSYSLOG_FileFormat");
+    }
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) template, OMSR_NO_RQD_TPL_OPTS));
 
     pData->ctl = aws_init(region, group, stream);
     rc = aws_logs_ensure(pData->ctl);
