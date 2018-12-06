@@ -45,7 +45,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
 typedef struct _instanceData {
-    CloudWatchLogsController *ctl;
+	CloudWatchLogsController *ctl;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -58,7 +58,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "group",    eCmdHdlrGetWord, 0 },
 	{ "stream",   eCmdHdlrGetWord, 0 },
 	{ "region",   eCmdHdlrGetWord, 0 },
-    { "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -94,15 +94,15 @@ ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-    dbgprintf("awslogs");
-    dbgprintf("\tcontroller='%p'\n", pData->ctl);
+	dbgprintf("awslogs");
+	dbgprintf("\tcontroller='%p'\n", pData->ctl);
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-    CODESTARTtryResume
-    DBGPRINTF("omawslogs: tryResume called\n");
-    iRet = RS_RET_OK;
+	CODESTARTtryResume
+	DBGPRINTF("omawslogs: tryResume called\n");
+	iRet = RS_RET_OK;
 ENDtryResume
 
 
@@ -115,14 +115,14 @@ CODESTARTdoAction
 	toWrite = (char*) ppString[0];
 	len = strlen(toWrite);
 
-    DBGPRINTF("omawslogs doAction([%d] %s, %p)\n",
-			  len, toWrite, ctl);
-    iRet = aws_logs_msg_put(ctl, (const char *) ppString[0]);
+	DBGPRINTF("omawslogs doAction([%d] %s, %p)\n",
+	          len, toWrite, ctl);
+	iRet = aws_logs_msg_put(ctl, (const char *) ppString[0]);
 
 	if(iRet == RS_RET_OK) {
-        DBGPRINTF("sent something\n");
-    } else {
-        DBGPRINTF("error sending to awslogs\n");
+		DBGPRINTF("sent something\n");
+	} else {
+		DBGPRINTF("error sending to awslogs\n");
 	}
 ENDdoAction
 
@@ -141,44 +141,44 @@ CODESTARTnewActInst
 
 	CHKiRet(createInstance(&pData));
 
-    for(int i = 0 ; i < actpblk.nParams ; ++i) {
-        if(!pvals[i].bUsed)
-            continue;
-        if(!strcmp(actpblk.descr[i].name, "region")) {
-            region = es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if(!strcmp(actpblk.descr[i].name, "group")) {
-            group  = es_str2cstr(pvals[i].val.d.estr, NULL);
+	for(int i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "region")) {
+			region = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "group")) {
+			group  = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "stream")) {
 			stream = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			template = es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else {
-            DBGPRINTF("omawslogs: program error, non-handled "
-                      "param '%s'\n", actpblk.descr[i].name);
-        }
-    }
+		} else {
+			DBGPRINTF("omawslogs: program error, non-handled "
+			          "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
 
-    CODE_STD_STRING_REQUESTnewActInst(1)
-    if (!template) {
-    	template = strdup("RSYSLOG_FileFormat");
-    }
+	CODE_STD_STRING_REQUESTnewActInst(1)
+	if (!template) {
+		template = strdup("RSYSLOG_FileFormat");
+	}
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) template, OMSR_NO_RQD_TPL_OPTS));
 
-    pData->ctl = aws_init(region, group, stream);
-    rc = aws_logs_ensure(pData->ctl);
+	pData->ctl = aws_init(region, group, stream);
+	rc = aws_logs_ensure(pData->ctl);
 
 	if (rc) {
-        DBGPRINTF("omawslogs: program error, aws_logs_ensure returned %d with msg '%s'\n",
-                rc, aws_logs_get_last_error(pData->ctl));
-        ABORT_FINALIZE(RS_RET_DATAFAIL);
+		DBGPRINTF("omawslogs: program error, aws_logs_ensure returned %d with msg '%s'\n",
+		          rc, aws_logs_get_last_error(pData->ctl));
+		ABORT_FINALIZE(RS_RET_DATAFAIL);
 	} else {
-        DBGPRINTF("omawslogs: aws_logs_ensure successful\n");
+		DBGPRINTF("omawslogs: aws_logs_ensure successful\n");
 	}
 
 	// TODO: can we avoid the es_str2cstr() and free() for params?
-    free(region);
-    free(group);
-    free(stream);
+	free(region);
+	free(group);
+	free(stream);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
