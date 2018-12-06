@@ -36,6 +36,8 @@
 #			export USE_VALGRIND="YES"
 #			source original-test.sh
 #		sample can be seen in imjournal-basic[.vg].sh
+#		You may also use USE_VALGRIND="YES-NOLEAK" to request valgrind without
+#		leakcheck (this sometimes is needed).
 #
 #
 # EXIT STATES
@@ -471,6 +473,9 @@ startup() {
 	if [ "$USE_VALGRIND" == "YES" ]; then
 		startup_vg "$1" "$2"
 		return
+	elif [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
+		startup_vg_noleak "$1" "$2"
+		return
 	fi
 	startup_common "$1" "$2"
 	if [ "$RSTB_DAEMONIZE" == "YES" ]; then
@@ -585,7 +590,7 @@ content_check_with_count() {
 	while [  $timecounter -lt $timeoutend ]; do
 		(( timecounter=timecounter+1 ))
 		count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
-		if [ $count -eq $2 ]; then
+		if [ ${count:=0} -eq $2 ]; then
 			echo content_check_with_count success, \"$1\" occured $2 times
 			break
 		else
@@ -593,7 +598,7 @@ content_check_with_count() {
 				shutdown_when_empty ""
 				wait_shutdown ""
 
-				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it $count times
+				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it "$count" times
 				echo file ${RSYSLOG_OUT_LOG} content is:
 				sort < ${RSYSLOG_OUT_LOG}
 				error_exit 1
@@ -723,7 +728,7 @@ shutdown_immediate() {
 # actually, we wait for rsyslog.pid to be deleted.
 # $1 is the instance
 wait_shutdown() {
-	if [ "$USE_VALGRIND" == "YES" ]; then
+	if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
 		wait_shutdown_vg "$1"
 		return
 	fi
@@ -927,7 +932,7 @@ wait_shutdown_vg() {
 	   ls -l vgcore.*
 	   error_exit 1
 	fi
-	if [ "$USE_VALGRIND" == "YES" ]; then
+	if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
 		check_exit_vg
 	fi
 }
