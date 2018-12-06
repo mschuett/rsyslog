@@ -109,20 +109,15 @@ ENDtryResume
 BEGINdoAction
 	const instanceData *const __restrict__ pData = pWrkrData->pData;
 	CloudWatchLogsController *ctl = pData->ctl;
-	char* toWrite;
-	uint len;
-CODESTARTdoAction
-	toWrite = (char*) ppString[0];
-	len = strlen(toWrite);
-
-	DBGPRINTF("omawslogs doAction([%d] %s, %p)\n",
-	          len, toWrite, ctl);
+	CODESTARTdoAction
+	DBGPRINTF("omawslogs doAction([%zu] %s, %p)\n",
+	          strlen((char *) ppString[0]), (char *) ppString[0], ctl);
 	iRet = aws_logs_msg_put(ctl, (const char *) ppString[0]);
 
 	if(iRet == RS_RET_OK) {
 		DBGPRINTF("sent something\n");
 	} else {
-		DBGPRINTF("error sending to awslogs\n");
+		DBGPRINTF("error sending to awslogs: %s\n", aws_logs_get_last_error(ctl));
 	}
 ENDdoAction
 
