@@ -2350,7 +2350,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
-		plugins/omawslogs/Makefile \
 		plugins/fmhttp/Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omudpspoof/Makefile \
@@ -2389,6 +2388,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omtcl/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
+		contrib/omawslogs/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -2428,7 +2428,6 @@ echo "    imkafka module will be compiled:          $enable_imkafka"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
-echo "    omawslogs support enabled:                $enable_omawslogs"
 echo "    omfile-hardened module will be compiled:  $enable_omfile_hardened"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
@@ -2446,6 +2445,7 @@ echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omamqp1 module will be compiled:          $enable_omamqp1"
 echo "    omtcl module will be compiled:            $enable_omtcl"
 echo "    omkafka module will be compiled:          $enable_omkafka"
+echo "    omawslogs support enabled:                $enable_omawslogs"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"

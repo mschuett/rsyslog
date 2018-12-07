@@ -203,10 +203,6 @@ if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif
 
-if ENABLE_AWSLOGS
-SUBDIRS += plugins/omawslogs
-endif
-
 if ENABLE_FMHTTP
 SUBDIRS += plugins/fmhttp
 endif
@@ -302,6 +298,10 @@ endif
 # mmkubernetes
 if ENABLE_MMKUBERNETES
 SUBDIRS += contrib/mmkubernetes
+endif
+
+if ENABLE_AWSLOGS
+SUBDIRS += contrib/omawslogs
 endif
 
 # tests are added as last element, because tests may need different
