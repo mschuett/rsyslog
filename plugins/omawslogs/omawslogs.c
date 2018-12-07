@@ -32,7 +32,7 @@
 #include "glbl.h"
 #include "parserif.h"
 
-#include "awslib.h"
+#include <rsyslog_awslogs.h>
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP

@@ -1136,7 +1136,7 @@ AC_ARG_ENABLE(mail,
 )
 AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 
-# AWS Cloudwatch Logs support (so far we do not need a library, but we need to turn this on and off)
+# AWS Cloudwatch Logs support
 AC_ARG_ENABLE(awslogs,
         [AS_HELP_STRING([--enable-awslogs],[Enable awslogs support @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -1146,6 +1146,13 @@ AC_ARG_ENABLE(awslogs,
          esac],
         [enable_omawslogs=no]
 )
+if test "x$enable_omawslogs" = "xyes"; then
+	AC_CHECK_HEADERS([rsyslog_awslogs.h])
+	AC_CHECK_LIB(rsyslog_awslogs, aws_logs_msg_put)
+#	AC_CHECK_LIB(, [aws-cpp-sdk-core], [], AC_MSG_ERROR([unable to find library aws-cpp-sdk-core]))
+#	AC_CHECK_LIB(, [aws-cpp-sdk-logs], [], AC_MSG_ERROR([unable to find library aws-cpp-sdk-logs]))
+#	PKG_CHECK_MODULES([RSYSLOG_AWSLOGS], [librsyslog_awslogs])
+fi
 AM_CONDITIONAL(ENABLE_AWSLOGS, test x$enable_omawslogs = xyes)
 
 
