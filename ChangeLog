@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.41.0 [v8-stable] 2019-01-22
+------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - openssl driver: improved error messages
   also fixes misleading wording of some error messages
@@ -57,6 +59,8 @@ Version 8.40.0 [v8-stable] 2018-12-11
 - bugfix omhttp: did not compile on some platforms
 - CI
    * made mysql-based tests (ommysql and omlibdbi) work inside containers
+   * bugfix testbench: do not execute libgcrypt tests if disabled
+     closes https://github.com/rsyslog/rsyslog/issues/3228
    * testbench: grep failed when string starting with "-" was used
      The search term was mistakenly interpreted as an option.
    * testbench: support auto-start/-stop of mysqld
@@ -105,6 +109,8 @@ Version 8.40.0 [v8-stable] 2018-12-11
      call pthread_join() albeit it is needed. Neverthless, this bug is
      causing so much CI grief that it is definitely worth it.
      closes https://github.com/rsyslog/rsyslog/issues/2902
+   * testbench: made a couple of (unnamed due to too many) test more robust
+     against slow (CI) machines
 ------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
 - imfile: improve truncation detection
