@@ -45,19 +45,23 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
 typedef struct _instanceData {
-	CloudWatchLogsController *ctl;
+	char *region;
+	char *group;
+	char *stream;
+	char *template;
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
+	CloudWatchLogsController *ctl;
 } wrkrInstanceData_t;
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
+	{ "region",   eCmdHdlrGetWord, 0 },
 	{ "group",    eCmdHdlrGetWord, 0 },
 	{ "stream",   eCmdHdlrGetWord, 0 },
-	{ "region",   eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -73,7 +77,20 @@ ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
+    int rc;
 CODESTARTcreateWrkrInstance
+	DBGPRINTF("omawslogs: createWrkrInstance\n");
+
+	pWrkrData->ctl = aws_init(pData->region, pData->group, pData->stream);
+	rc = aws_logs_ensure(pWrkrData->ctl);
+
+	if (rc) {
+		DBGPRINTF("omawslogs: program error, aws_logs_ensure returned %d with msg '%s'\n",
+		          rc, aws_logs_get_last_error(pWrkrData->ctl));
+		iRet = RS_RET_DATAFAIL;
+	} else {
+		DBGPRINTF("omawslogs: aws_logs_ensure successful\n");
+	}
 ENDcreateWrkrInstance
 
 
@@ -84,18 +101,38 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	if (pData->region) {
+		free(pData->region);
+		pData->region = NULL;
+	}
+	if (pData->group) {
+		free(pData->group);
+		pData->group = NULL;
+	}
+	if (pData->stream) {
+		free(pData->stream);
+		pData->stream = NULL;
+	}
+	if (pData->template) {
+		free(pData->template);
+		pData->template = NULL;
+	}
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	aws_shutdown(pWrkrData->ctl);
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("awslogs");
-	dbgprintf("\tcontroller='%p'\n", pData->ctl);
+	dbgprintf("\tregion='%p'\n", pData->region);
+	dbgprintf("\tgroup='%p'\n", pData->group);
+	dbgprintf("\tstream='%p'\n", pData->stream);
+	dbgprintf("\ttemplate='%p'\n", pData->template);
 ENDdbgPrintInstInfo
 
 
@@ -107,8 +144,7 @@ ENDtryResume
 
 
 BEGINdoAction
-	const instanceData *const __restrict__ pData = pWrkrData->pData;
-	CloudWatchLogsController *ctl = pData->ctl;
+	CloudWatchLogsController *ctl = pWrkrData->ctl;
 	CODESTARTdoAction
 	DBGPRINTF("omawslogs doAction([%zu] %s, %p)\n",
 	          strlen((char *) ppString[0]), (char *) ppString[0], ctl);
@@ -124,11 +160,6 @@ ENDdoAction
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
-	int rc;
-	char *region = NULL;
-	char *group = NULL;
-	char *stream = NULL;
-	char *template = NULL;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -140,13 +171,13 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "region")) {
-			region = es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->region = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "group")) {
-			group  = es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->group  = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "stream")) {
-			stream = es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->stream = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			template = es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->template = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			DBGPRINTF("omawslogs: program error, non-handled "
 			          "param '%s'\n", actpblk.descr[i].name);
@@ -154,26 +185,11 @@ CODESTARTnewActInst
 	}
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
-	if (!template) {
-		template = strdup("RSYSLOG_FileFormat");
+	if (!pData->template) {
+		pData->template = strdup("RSYSLOG_FileFormat");
 	}
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) template, OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) pData->template, OMSR_NO_RQD_TPL_OPTS));
 
-	pData->ctl = aws_init(region, group, stream);
-	rc = aws_logs_ensure(pData->ctl);
-
-	if (rc) {
-		DBGPRINTF("omawslogs: program error, aws_logs_ensure returned %d with msg '%s'\n",
-		          rc, aws_logs_get_last_error(pData->ctl));
-		ABORT_FINALIZE(RS_RET_DATAFAIL);
-	} else {
-		DBGPRINTF("omawslogs: aws_logs_ensure successful\n");
-	}
-
-	// TODO: can we avoid the es_str2cstr() and free() for params?
-	free(region);
-	free(group);
-	free(stream);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -195,7 +211,6 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
 
 
