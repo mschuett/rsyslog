@@ -88,20 +88,27 @@ initializeBatch(wrkrInstanceData_t *pWrkrData)
 
 
 BEGINcreateWrkrInstance
-    int rc;
+	int rc;
 CODESTARTcreateWrkrInstance
 	DBGPRINTF("omawslogs: createWrkrInstance\n");
 
-	pWrkrData->ctl = aws_init(pData->region, pData->group, pData->stream);
+	pWrkrData->ctl = aws_create_controller(pData->region, pData->group, pData->stream);
+	if (!pWrkrData->ctl) {
+		LogError(0, RS_RET_OBJ_CREATION_FAILED,
+		         "omawslogs: could not create controller\n");
+		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+	}
 	rc = aws_logs_ensure(pWrkrData->ctl);
 
 	if (rc) {
-		DBGPRINTF("omawslogs: program error, aws_logs_ensure returned %d with msg '%s'\n",
-		          rc, aws_logs_get_last_error(pWrkrData->ctl));
-		iRet = RS_RET_DATAFAIL;
+		LogError(0, RS_RET_DATAFAIL,
+		         "omawslogs: program error, aws_logs_ensure returned %d with msg '%s'\n",
+		         rc, aws_logs_get_last_error(pWrkrData->ctl));
+		ABORT_FINALIZE(RS_RET_DATAFAIL);
 	} else {
 		DBGPRINTF("omawslogs: aws_logs_ensure successful\n");
 	}
+finalize_it:
 ENDcreateWrkrInstance
 
 
@@ -133,7 +140,7 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	aws_shutdown(pWrkrData->ctl);
+	aws_free_controller(pWrkrData->ctl);
 ENDfreeWrkrInstance
 
 
@@ -261,6 +268,7 @@ CODESTARTmodExit
 	/* release what we no longer need */
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	aws_shutdown();
 ENDmodExit
 
 
@@ -276,6 +284,7 @@ ENDqueryEtryPt
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	int aws_sdk_loglevel;
 CODEmodInit_QueryRegCFSLineHdlr
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	if(!bCoreSupportsBatching) {
@@ -285,6 +294,14 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+
+
+	if (Debug) {
+		aws_sdk_loglevel = 5;
+	} else {
+		aws_sdk_loglevel = 0;
+	}
+	aws_init(aws_sdk_loglevel);
 
 	DBGPRINTF("omawslogs version %s initializing\n", VERSION);
 ENDmodInit
