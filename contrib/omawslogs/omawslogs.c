@@ -51,9 +51,12 @@ typedef struct _instanceData {
 	char *template;
 } instanceData;
 
+#define MAX_BATCH_SIZE 1024
 typedef struct wrkrInstanceData {
 	instanceData *pData;
 	CloudWatchLogsController *ctl;
+	const char* batch[MAX_BATCH_SIZE];
+	uint batchsize;
 } wrkrInstanceData_t;
 
 /* tables for interfacing with the v6 config system */
@@ -74,6 +77,14 @@ static struct cnfparamblk actpblk =
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
+
+
+static void ATTR_NONNULL()
+initializeBatch(wrkrInstanceData_t *pWrkrData)
+{
+	memset(pWrkrData->batch, 0, MAX_BATCH_SIZE);
+	pWrkrData->batchsize = 0;
+}
 
 
 BEGINcreateWrkrInstance
@@ -143,19 +154,66 @@ BEGINtryResume
 ENDtryResume
 
 
+/* trying to follow the naming convention from omhttp and omelasticsearch
+ * with buildBatch and submitBatch */
+static inline void ATTR_NONNULL()
+buildBatch(wrkrInstanceData_t *pWrkrData, const uchar *message) {
+	pWrkrData->batch[pWrkrData->batchsize++] = (char *) message;
+}
+
+static rsRetVal ATTR_NONNULL()
+submitBatch(wrkrInstanceData_t *pWrkrData)
+{
+	DEFiRet;
+
+	iRet = aws_logs_msg_put_batch(pWrkrData->ctl, pWrkrData->batch, pWrkrData->batchsize);
+	DBGPRINTF("omawslogs: submitBatch of %d messages, returns %d with message %s\n",
+			pWrkrData->batchsize, iRet, aws_logs_get_last_error(pWrkrData->ctl));
+
+	RETiRet;
+}
+
+
+BEGINbeginTransaction
+	CloudWatchLogsController *ctl = pWrkrData->ctl;
+	CODESTARTbeginTransaction
+	DBGPRINTF("omawslogs: beginTransaction(%p)\n", ctl);
+	initializeBatch(pWrkrData);
+ENDbeginTransaction
+
+
 BEGINdoAction
 	CloudWatchLogsController *ctl = pWrkrData->ctl;
 	CODESTARTdoAction
-	DBGPRINTF("omawslogs doAction([%zu] %s, %p)\n",
-	          strlen((char *) ppString[0]), (char *) ppString[0], ctl);
-	iRet = aws_logs_msg_put(ctl, (const char *) ppString[0]);
+	DBGPRINTF("omawslogs: doAction(%p, %s)\n", ctl, *ppString);
 
-	if(iRet == RS_RET_OK) {
-		DBGPRINTF("sent something\n");
-	} else {
-		DBGPRINTF("error sending to awslogs: %s\n", aws_logs_get_last_error(ctl));
+	if (pWrkrData->batchsize == MAX_BATCH_SIZE) {
+		CHKiRet(submitBatch(pWrkrData));
+		initializeBatch(pWrkrData);
 	}
+	buildBatch(pWrkrData, ppString[0]);
+
+	/* If there is only one item in the batch, all previous items have been
+	 * submitted or this is the first item for this transaction. Return previous
+	 * committed so that all items leading up to the current (exclusive)
+	 * are not replayed should a failure occur anywhere else in the transaction. */
+	iRet = pWrkrData->batchsize == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
+
+finalize_it:
 ENDdoAction
+
+
+BEGINendTransaction
+	CODESTARTendTransaction
+	DBGPRINTF("omawslogs: endTransaction\n");
+	if (pWrkrData->batchsize > 0) {
+		CHKiRet(submitBatch(pWrkrData));
+	} else {
+		DBGPRINTF("omawslogs: no data left to send\n");
+	}
+
+finalize_it:
+ENDendTransaction
 
 
 BEGINnewActInst
@@ -209,6 +267,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_TXIF_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
@@ -218,6 +277,11 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+	if(!bCoreSupportsBatching) {
+		LogError(0, NO_ERRCODE, "omawslogs: rsyslog core too old");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	/* tell which objects we need */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
