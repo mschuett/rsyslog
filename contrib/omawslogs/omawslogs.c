@@ -28,8 +28,6 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
-#include "datetime.h"
-#include "glbl.h"
 #include "parserif.h"
 
 #include <rsyslog_awslogs.h>
@@ -41,8 +39,6 @@ MODULE_CNFNAME("omawslogs")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(datetime)
 
 typedef struct _instanceData {
 	char *region;
@@ -270,8 +266,6 @@ NO_LEGACY_CONF_parseSelectorAct
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(datetime, CORE_COMPONENT);
-	objRelease(glbl, CORE_COMPONENT);
 	aws_shutdown();
 	DBGPRINTF("omawslogs: modExit --> shutdown\n");
 ENDmodExit
@@ -296,10 +290,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		LogError(0, NO_ERRCODE, "omawslogs: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	/* tell which objects we need */
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
-
 
 	if (Debug) {
 		aws_sdk_loglevel = 5;
