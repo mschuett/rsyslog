@@ -119,6 +119,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	DBGPRINTF("omawslogs: freeInstance\n");
 	if (pData->region) {
 		free(pData->region);
 		pData->region = NULL;
@@ -140,6 +141,7 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	DBGPRINTF("omawslogs: freeWrkrInstance\n");
 	aws_free_controller(pWrkrData->ctl);
 ENDfreeWrkrInstance
 
@@ -156,7 +158,7 @@ ENDdbgPrintInstInfo
 
 BEGINtryResume
 	CODESTARTtryResume
-	DBGPRINTF("omawslogs: tryResume called\n");
+	DBGPRINTF("omawslogs: tryResume\n");
 	iRet = RS_RET_OK;
 ENDtryResume
 
@@ -174,7 +176,7 @@ submitBatch(wrkrInstanceData_t *pWrkrData)
 	DEFiRet;
 
 	iRet = aws_logs_msg_put_batch(pWrkrData->ctl, pWrkrData->batch, pWrkrData->batchsize);
-	DBGPRINTF("omawslogs: submitBatch of %d messages, returns %d with message %s\n",
+	DBGPRINTF("omawslogs: submitBatch of %d messages, returns %d with message '%s'\n",
 			pWrkrData->batchsize, iRet, aws_logs_get_last_error(pWrkrData->ctl));
 
 	RETiRet;
@@ -226,6 +228,8 @@ ENDendTransaction
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 CODESTARTnewActInst
+	DBGPRINTF("omawslogs: newActInst\n");
+
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -269,6 +273,7 @@ CODESTARTmodExit
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	aws_shutdown();
+	DBGPRINTF("omawslogs: modExit --> shutdown\n");
 ENDmodExit
 
 
