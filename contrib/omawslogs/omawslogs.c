@@ -82,7 +82,7 @@ ENDcreateInstance
 static void ATTR_NONNULL()
 initializeBatch(wrkrInstanceData_t *pWrkrData)
 {
-	memset(pWrkrData->batch, 0, MAX_BATCH_SIZE);
+	memset(pWrkrData->batch, 0, sizeof(pWrkrData->batch));
 	pWrkrData->batchsize = 0;
 }
 
